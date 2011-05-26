@@ -1,0 +1,176 @@
+<html>
+<body>
+<center>
+<canvas id="myDrawing" width="800" height="600">
+This text is displayed if your browser does not support HTML5 Canvas.
+</canvas>
+</center>
+<script type="text/javascript" language="text/javascript" charset="utf-8">
+var element;  
+var ctx;
+var width;
+var height;
+var center_x;
+var center_y;
+var bgImageData;
+var metaball_bound_size = 50;
+init();
+
+function setPixel(imageData, x, y, r, g, b, a) {
+    index = (x + y * imageData.width) * 4;
+    imageData.data[index+0] = r;
+    imageData.data[index+1] = g;
+    imageData.data[index+2] = b;
+    imageData.data[index+3] = a;    
+}
+function click(ev) {
+    var x = ev.clientX - element.offsetLeft;
+    var y = ev.clientY - element.offsetTop;
+	var isScared = isInsideMetaball(x,y);	
+	if (isScared >= 0) {
+		metaballs[isScared].scared = true;
+	}
+}
+function isInsideMetaball(x,y) {
+	for (var i = 0; i < metaballs.length; i++) {
+		if (x > metaballs[i].x-metaball_bound_size && 
+			x < metaballs[i].x+metaball_bound_size &&
+			y > metaballs[i].y-metaball_bound_size &&
+			y < metaballs[i].y+metaball_bound_size) {
+			return i;   
+		}
+	}
+	return -1;
+}
+
+function init() {
+	element = document.getElementById("myDrawing");
+	element.addEventListener('click', click, false);
+	ctx = element.getContext("2d");
+	// read the width and height of the canvas
+	width = parseInt(element.getAttribute("width"));
+	height = parseInt(element.getAttribute("height"));
+	center_x=width/2;
+	center_y=height/2;	
+	bgImageData = ctx.createImageData(width, height);
+	clear(bgImageData);
+	return setInterval(loop, 10);
+}
+
+function clear(imageData) {
+	for (var i = 0; i < imageData.data.length; i++) {
+		imageData.data[i] = 10000;
+	}
+}
+function metaballDistance(mx,my,x,y) {
+	var xs = (x-mx);
+	var ys = (y-my);
+	var rsquared = (xs*xs)+(ys*ys);
+	return 3/(rsquared+10);
+}
+
+
+
+function metaball(x,y) {
+	this.x = x;
+	this.y = y;
+	this.maxMoveStep = 4;
+	this.dx = Math.random()*2*randomDir();
+	this.dy = Math.random()*2*randomDir();
+	this.cycle = 0;
+	this.maxCycles = Math.round(Math.random()*5);
+	this.scared = false;
+	this.scared_acc = 0;
+	this.newPos = function() {
+		this.x = Math.round(this.x + this.dx);
+		this.y = Math.round(this.y + this.dy);
+		if (this.scared) {
+			if (this.scared_acc < 6) {
+				this.scared_acc++;
+			}
+			if (this.x > center_x) {
+				this.dx = -1*this.scared_acc;
+			} 
+			else {
+				this.dx = 1*this.scared_acc;
+			}
+			if (this.y > center_y) {
+				this.dy = -1*this.scared_acc;
+			} 
+			else {
+				this.dy = 1*this.scared_acc;
+			}
+			if (this.x < center_x +	10 && this.x > center_x - 10 &&
+				this.y < center_y +	10 && this.y > center_y - 10) {
+				this.scared = false;
+				this.scared_acc = 0;
+			}
+		} else {
+			this.cycle++;
+			if (this.cycle > this.maxCycles) {
+				this.dx = Math.random()*this.maxMoveStep*randomDir();
+				this.dy = Math.random()*this.maxMoveStep*randomDir();
+				this.cycle = 0;
+			}
+		}
+	}
+}
+
+function randomDir() {
+	if (Math.random() >= 0.5)
+		return -1;
+	else
+		return 1;
+}
+
+var metaballs = [new metaball(center_x,center_y), 
+                 new metaball(center_x,center_y),
+                 new metaball(center_x,center_y),
+                 new metaball(center_x,center_y),
+                 new metaball(center_x,center_y),
+                 new metaball(center_x,center_y),
+                 new metaball(center_x,center_y)];
+
+var d_max = 0;
+function loop() {
+	draw();
+	move();
+}
+
+function move() {
+	for (m = 0; m < metaballs.length; m++) {
+		metaballs[m].newPos();
+	}
+}
+
+
+function draw() {
+	imageData = ctx.createImageData(bgImageData);
+
+	//clear(imageData);
+	for (var m = 0; m < metaballs.length; m++) {
+		for (var y = metaballs[m].y-metaball_bound_size; y < metaballs[m].y+metaball_bound_size; y++) {
+			for (var x = metaballs[m].x-metaball_bound_size; x < metaballs[m].x+metaball_bound_size; x++) {
+				var d_sum = 0;
+				for (var mp = 0; mp < metaballs.length; mp++) {
+					d_sum += metaballDistance(metaballs[mp].x, metaballs[mp].y, x, y);
+					
+				}
+				r = 0;
+				g = 0;
+				b = 0;
+				if (d_sum > 0.005 && d_sum < 0.008) {
+					setPixel(imageData,x,y,r,g,b,0xff);
+				}
+				
+			}
+		}
+	}
+	// copy the image data back onto the canvas
+	ctx.putImageData(imageData, 0, 0); // at coords 0,0	
+
+}
+
+</script>
+</body>
+</html>
